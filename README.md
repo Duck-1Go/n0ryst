@@ -1,105 +1,104 @@
-# Noroshi Compiler (`n0ryst`) Documentation
+# N0ryst Compiler
 
-## Overview
+N0ryst is a lightweight, cross-platform compiler for the Noroshi language, designed with a minimalist philosophy inspired by Japanese precision. It supports macOS, FreeBSD, Linux, Windows, iOS, and Android, generating platform-specific assembly (macho64 for macOS/iOS, ELF64 for FreeBSD/Linux/Android, PE32+ for Windows) and linking executables using native tools like `ld`, `lld`, or `link.exe`. N0ryst is ideal for hobbyists and developers seeking a simple, extensible compiler for small projects.
 
-`n0ryst` is a compiler for the Noroshi language, written in C. Noroshi is a minimalist programming language for console applications. The compiler transforms `.nrs` files into assembly (`.asm`) and builds native executables for macOS (macho64), FreeBSD (ELF64), and Linux (ELF64) using `nasm` and platform-specific linkers (`ld`). Dependencies are managed via `.noi` files.
+## Features
 
-- **Goals**:
-  - Simple syntax for rapid prototyping.
-  - Efficient native code generation.
-  - Cross-platform support (macOS, FreeBSD, Linux).
-- **Version**: 1.09 (2024-2025).
-- **Platforms**: macOS, FreeBSD, Linux.
-- **Dependencies**: `nasm`, `ld` (macOS), `ld.bfd` (FreeBSD/Linux), `gcc`/`clang`.
-- **License**: BSL 1.0.
+- **Cross-Platform Support**: Compile Noroshi code for macOS, FreeBSD, Linux, Windows, iOS, and Android with a single `--target` flag.
+- **Minimalist Design**: Clean syntax, small footprint, and efficient code generation.
+- **Platform-Specific Assembly**: Generates macho64, ELF64, or PE32+ tailored to each platform's ABI and system calls.
+- **Dependency Management**: Supports up to 16 dependencies via `.noi` configuration.
+- **Extensible**: Easy to extend with new Noroshi language features or platform support.
+- **Open Source**: Licensed under Boost Software License 1.0 (BSL 1.0).
+
+## License
+
+Licensed under the Boost Software License 1.0 (BSL 1.0). See `LICENSE` for details.
 
 ## Installation
 
+Ensure you have the necessary tools for your platform before building N0ryst.
+
 ### macOS
-- **Requirements**:
-  - Xcode 11+ (`xcode-select --install`).
-  - `nasm`:
-    ```bash
-    sudo port install nasm
-    ```
-- **Build**:
-  ```bash
-  cd /Users/retochan/Projects/n0ryst-project
-  make
-  ```
-- **Verify**:
-  ```bash
-  ./n0ryst --version
-  ```
-  Output: `n0ryst ver. 1.09, 2024-2025`.
+```bash
+xcode-select --install
+sudo port install nasm
+make
+```
 
 ### FreeBSD
-- **Requirements**:
-  - FreeBSD 12+.
-  - `nasm`, `binutils`, `gcc`/`clang`:
-    ```bash
-    sudo pkg install nasm binutils gcc
-    ```
-- **Build**:
-  ```bash
-  cd /path/to/n0ryst-project
-  gmake
-  ```
-- **Verify**:
-  ```bash
-  ./n0ryst --version
-  ```
+```bash
+sudo pkg install nasm binutils gcc
+gmake
+```
 
-### Linux (Ubuntu/Debian)
-- **Requirements**:
-  - `nasm`, `binutils`, `gcc`:
-    ```bash
-    sudo apt update
-    sudo apt install nasm binutils gcc
-    ```
-- **Build**:
-  ```bash
-  cd /path/to/n0ryst-project
-  make
-  ```
-- **Verify**:
-  ```bash
-  ./n0ryst --version
-  ```
+### Linux
+```bash
+sudo apt update
+sudo apt install nasm binutils gcc
+make
+```
 
-### Environment Check
-- NASM: `nasm -v`
-- GCC/Clang: `gcc --version` or `clang --version`
-- LD: `ld --version`
-- FreeBSD/Linux libraries: `/usr/include`, `/usr/lib`.
+### Windows
+- Install MSYS2: `pacman -S mingw-w64-x86_64-nasm mingw-w64-x86_64-gcc`
+- Add MSVC `link.exe` (Visual Studio Build Tools) to PATH.
+```bash
+mingw32-make
+```
+
+### iOS
+- Install Xcode and iOS SDK.
+- Configure `xcodebuild` for linking.
+```bash
+make
+```
+
+### Android
+- Install Android NDK: `sudo apt install android-ndk` (Linux) or equivalent.
+- Use NDK's `lld` linker.
+```bash
+make
+```
 
 ## Usage
 
-### Command Line
 ```bash
 n0ryst [options] [path]
 ```
-- `path`: Directory with `.nrs` (code) and `.noi` (configuration).
-- Options:
-  - `--help`: Show help.
-  - `--version`: Show version.
-  - `--target <platform>`: Target platform (macos, freebsd, linux).
 
-Example:
+- `path`: Directory containing `.nrs` (Noroshi code) and `.noi` (configuration) files.
+- Options:
+  - `--help`: Display help message.
+  - `--version`: Show version (1.09, 2024-2025).
+  - `--target <platform>`: Specify target platform (`macos`, `freebsd`, `linux`, `windows`, `ios`, `android`).
+
+### Example
+Compile for Linux:
 ```bash
-./n0ryst examples
+n0ryst --target linux .
+```
+Run the output:
+```bash
+./N0roshi
 ```
 
-### Project Structure
+## Project Structure
+
+A typical N0ryst project includes:
+- `.nrs` files: Noroshi source code (main and dependencies).
+- `.noi` file: Configuration for kernel name, dependencies, and runtime settings.
+
+Example structure:
 ```
 project/
-├── main.nrs        # Main code
-├── module1.nrs     # Dependencies
-└── config.noi      # Configuration
+├── main.nrs        # Main Noroshi program
+├── module1.nrs     # Dependency module
+└── config.noi      # Project configuration
 ```
 
-### Configuration (.noi)
-Example:
+## Configuration (.noi)
+
+The `.noi` file defines project settings. Example:
 ```noi
 kernel: N0roshi
 deps: module1.nrs
@@ -109,23 +108,29 @@ mem: 16M
 level: debug
 prompt: "> "
 ```
-- `kernel`: Output executable name.
-- `deps`: Dependency files (up to 16).
-- `exit_key`: Program exit key.
-- `start`, `mem`, `level`, `prompt`: Reserved for future use.
+
+- `kernel`: Name of the output executable.
+- `deps`: Comma-separated list of dependency `.nrs` files (max 16).
+- `exit_key`: Key to exit the program (default: `q`).
+- `start`, `mem`, `level`, `prompt`: Reserved for future features (e.g., entry point, memory allocation, logging, UI prompt).
+
+## Compilation Process
+
+N0ryst processes `.nrs` files through lexing, parsing, type checking, and code generation, producing platform-specific assembly. The output is linked into an executable.
 
 ### Compilation Output
+Example log for a project with one dependency:
 ```
 n0ryst ver. 1.09, 2024-2025
-Starting compiling
-Compiling dependency: examples/module1.nrs
+Starting compilation
+Compiling dependency: module1.nrs
 [Parsing] 50%
 [Parsing] 100%
 [Type Checking] 0%
 [Type Checking] 100%
 [Codegen] 0%
 [Codegen] 100%
-Compiling main: examples/main.nrs
+Compiling main file: main.nrs
 [Parsing] 50%
 [Parsing] 100%
 [Type Checking] 0%
@@ -135,390 +140,266 @@ Compiling main: examples/main.nrs
 Compiled in 0.XX seconds
 ```
 
+The resulting executable (e.g., `N0roshi`) outputs `N0roshi running...` and exits on the `exit_key`.
+
 ## Noroshi Language
+
+Noroshi is a minimalist language designed for simplicity and clarity, inspired by Japanese aesthetics.
 
 ### Syntax
 
 #### Blocks
+Encapsulate code in blocks:
 ```
 /+[ <commands> /=]
 ```
 
 #### Variables
+Declare and assign 64-bit integers or strings:
 ```
 let x = 42
+let name = "Shinobi"
 ```
-- Types: `Int64`, strings.
-- Stored on stack.
+- Stored on the stack.
+- Supports `Int64` and strings.
 
 #### Output
+Print to console:
 ```
-pnt "Hello"
+pnt "Hello, Noroshi!"
 ```
-- Outputs via `printf` (FreeBSD/Linux) or `_printf` (macOS).
+- Uses `printf` (FreeBSD/Linux/Windows/Android) or `_printf` (macOS/iOS).
 
 #### Keyboard Check
+Check for keyboard input:
 ```
 kbchk
 ```
-- Reads input via `getchar` (FreeBSD/Linux) or `_getchar` (macOS).
-- Exits on `exit_key`.
+- Reads via `getchar` (FreeBSD/Linux/Windows/Android) or `_getchar` (macOS/iOS).
+- Exits if the input matches `exit_key`.
 
-#### Example
+#### Example Program
 `main.nrs`:
 ```
-/+[ let score = 0 pnt "Game started" kbchk /=]
+/+[ 
+  let score = 0 
+  pnt "Game started" 
+  kbchk 
+/=]
 ```
+Output: `Game started`, exits on `q`.
 
 ### Limitations
-- No loops, conditionals, or functions.
-- Types: numbers, strings, `=` symbol.
-- Limits: 1024 tokens, 2048 AST nodes, 4096-byte output.
+- No loops, conditionals, or functions (planned for future versions).
+- Supported tokens: numbers, strings, `=`, `/+[`, `/=]`.
+- Limits: 1024 tokens, 2048 AST nodes, 4096-byte assembly output.
 
-## Compiler Internals
+## Platform Details
 
-### Compilation Stages
-1. **Read .noi**:
-   - Parses `kernel`, `deps`, `exit_key`.
-2. **Find .nrs**:
-   - Main file not listed in `deps`.
-3. **Lexical Analysis**:
-   - Tokens: `TOKEN_OP_BLOCK_START` (`/+[`), `TOKEN_STRING`, `TOKEN_EOF`, etc.
-4. **Parsing**:
-   - AST: `AST_BLOCK`, `AST_VARDECL`, `AST_PRINT`, `AST_KBCHK`, `AST_END`.
-5. **Code Generation**:
-   - Generates assembly for macho64 (macOS) or ELF64 (FreeBSD/Linux).
-   - Main file: `_main` (macOS) or `main` (FreeBSD/Linux).
-   - Dependencies: `module_init`.
-6. **Assembly**:
-   - macOS: `nasm -f macho64`, `ld -lSystem`.
-   - FreeBSD: `nasm -f elf64`, `ld.bfd -lc`.
-   - Linux: `nasm -f elf64`, `ld -lc`.
-7. **Cleanup**:
-   - Removes `.o`, `.asm`.
-
-### Assembly (macOS)
-```nasm
-section .data
-msg db 'N0roshi running...', 10, 0
-input_buf db 0
-section .text
-extern _getchar
-extern _printf
-global _main
-kbhit:
-  mov rax, 0x2000003
-  mov rdi, 0
-  syscall
-  cmp rax, -1
-  je .no_key
-  mov byte [rel input_buf], al
-  mov rax, 1
-  ret
-.no_key:
-  xor rax, rax
-  ret
-_main:
-  push rbp
-  mov rbp, rsp
-  sub rsp, 16
-  lea rdi, [rel msg]
-  xor rax, rax
-  call _printf
-  call kbhit
-  test rax, rax
-  jz .no_input
-  mov al, byte [rel input_buf]
-  cmp al, 'q'
-  je .exit
-.no_input:
-.exit:
-  mov rsp, rbp
-  pop rbp
-  mov rax, 0x2000001
-  mov rdi, 0
-  syscall
-```
-
-### Assembly (FreeBSD/Linux)
-```nasm
-section .data
-msg db 'N0roshi running...', 10, 0
-input_buf db 0
-section .text
-extern getchar
-extern printf
-global main
-kbhit:
-  mov rax, 0
-  mov rdi, 0
-  mov rsi, input_buf
-  mov rdx, 1
-  syscall
-  cmp rax, 0
-  je .no_key
-  mov rax, 1
-  ret
-.no_key:
-  xor rax, rax
-  ret
-main:
-  push rbp
-  mov rbp, rsp
-  sub rsp, 16
-  lea rdi, [msg]
-  xor rax, rax
-  call printf
-  call kbhit
-  test rax, rax
-  jz .no_input
-  mov al, [input_buf]
-  cmp al, 'q'
-  je .exit
-.no_input:
-.exit:
-  mov rsp, rbp
-  pop rbp
-  mov rax, 60
-  xor rdi, rdi
-  syscall
-```
-
-## Cross-Compilation
+N0ryst adapts to each platform's architecture and system calls.
 
 ### macOS
-- **Command**:
-  ```bash
-  ./n0ryst --target macos examples
-  ```
-- **Linker**: `ld -lSystem -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`.
+- Assembly: macho64
+- Syscalls: Mach (`0x2000003` for `read`, `0x2000001` for `exit`)
+- Functions: `_printf`, `_getchar`
+- Linker: `ld -lSystem -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`
+```bash
+n0ryst --target macos .
+```
 
 ### FreeBSD
-- **Command**:
-  ```bash
-  ./n0ryst --target freebsd examples
-  ```
-- **Linker**: `ld.bfd -lc`.
-- **Libraries**: `/usr/lib` (FreeBSD `libc`).
+- Assembly: ELF64
+- Syscalls: `read: 3`, `exit: 1`
+- Functions: `printf`, `getchar`
+- Linker: `ld.bfd -lc`
+```bash
+n0ryst --target freebsd .
+```
 
 ### Linux
-- **Command**:
-  ```bash
-  ./n0ryst --target linux examples
-  ```
-- **Linker**: `ld -lc`.
-- **Libraries**: `/usr/lib` (GNU `glibc`).
-
-## Examples
-
-### Simple Program
-`main.nrs`:
-```
-/+[ pnt "Welcome" kbchk /=]
-```
-`config.noi`:
-```noi
-kernel: Welcome
-exit_key: "q"
-```
+- Assembly: ELF64
+- Syscalls: `read: 0`, `exit: 60`
+- Functions: `printf`, `getchar`
+- Linker: `ld -lc`
 ```bash
-./n0ryst --target macos .
-./Welcome
-```
-Output: `N0roshi running...`
-
-### With Variable
-`main.nrs`:
-```
-/+[ let x = 10 pnt "Score set" kbchk /=]
-```
-- Sets `x = 10`.
-- Outputs `Score set`.
-
-### With Dependency
-`module1.nrs`:
-```
-/+[ pnt "Module loaded" /=]
-```
-`main.nrs`:
-```
-/+[ pnt "Main started" kbchk /=]
-```
-`config.noi`:
-```noi
-kernel: Game
-deps: module1.nrs
-exit_key: "q"
+n0ryst --target linux .
 ```
 
-## Debugging
+### Windows
+- Assembly: PE32+
+- Functions: `printf`, `getchar` (msvcrt), `ExitProcess` (kernel32)
+- Linker: `link /out:<kernel>.exe msvcrt.lib kernel32.lib`
+```bash
+n0ryst --target windows .
+```
+
+### iOS
+- Assembly: macho64
+- Syscalls: Mach (`0x2000003` for `read`, `0x2000001` for `exit`)
+- Functions: `_printf`, `_getchar`
+- Linker: `ld -lSystem -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk`
+```bash
+n0ryst --target ios .
+```
+
+### Android
+- Assembly: ELF64
+- Syscalls: `read: 0`, `exit: 60`
+- Functions: `printf`, `getchar`
+- Linker: `ld -lc` (NDK's `lld`)
+```bash
+n0ryst --target android .
+```
+
+## Extending N0ryst
+
+To add new features:
+1. **Language Features**: Extend `lexer` and `parser` in `n0ryst.c` for new tokens (e.g., loops, conditionals).
+2. **Platform Support**: Add new `Platform` enum values and update `codegen` for new syscalls/ABIs.
+3. **Dependencies**: Modify `read_noi` to support additional `.noi` fields.
+4. **Optimization**: Enhance `codegen` for smaller/faster assembly output.
+
+Contribute via GitHub pull requests.
+
+## Troubleshooting
 
 ### Compilation Errors
-- **Lexical**:
-  ```
-  Lexing error at position X, character 'Y'
-  ```
-  - Check `.nrs` at position `X`.
-- **Parsing**:
-  ```
-  Parsing error: expected block start
-  ```
-  - Ensure code starts with `/+[` and ends with `/=]`.
-- **Files**:
-  ```
-  Error: No main .nrs file found
-  ```
-  - Add `.nrs` not listed in `deps`.
+- **Lexical**: `Lexing error at position X, character 'Y'`
+  - Check `.nrs` syntax at position `X`.
+- **Parsing**: `Parsing error: expected block start`
+  - Verify `/+[` and `/=]` pairs.
+- **File Not Found**: `Error: No main .nrs file found`
+  - Ensure a `.nrs` file exists outside `deps` in `.noi`.
 
 ### Build Errors
-- **macOS**:
-  ```
-  ld: library 'System' not found
-  ```
-  - Verify SDK: `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`.
-- **FreeBSD**:
-  ```
-  ld: cannot find -lc
-  ```
-  - Install `libc`: `sudo pkg install lib32`.
-- **Linux**:
-  ```
-  ld: cannot find -lc
-  ```
+- **macOS/iOS**: `ld: library 'System' not found`
+  - Verify Xcode SDK path.
+- **FreeBSD**: `ld: cannot find -lc`
+  - Install `lib32`: `sudo pkg install lib32`.
+- **Linux**: `ld: cannot find -lc`
   - Install `libc6-dev`: `sudo apt install libc6-dev`.
+- **Windows**: `LINK : fatal error`
+  - Ensure MSVC `link.exe` and `msvcrt.lib` are in PATH.
+- **Android**: Linker errors
+  - Verify NDK path and `lld` configuration.
 
 ### Runtime Errors
-- No output:
-  - Check `pnt` in code.
-- No exit on `q`:
-  - Verify `exit_key` in `.noi`.
+- **No Output**: Check for `pnt` commands in `.nrs`.
+- **No Exit on Key**: Verify `exit_key` in `.noi`.
+- **Crashes**:
+  - Unix: `gdb ./N0roshi`, `run`
+  - Windows: `gdb N0roshi.exe`, `run`
+  - iOS/Android: Use Xcode/ADB logs.
 
-## Enhancements
-1. **Syntax**:
-   - Add loops (`while`), conditionals (`if`), functions.
-   - Support `Float`, arrays.
-2. **Compiler**:
-   - Optimize AST.
-   - Detailed error messages with line numbers.
-3. **Cross-Compilation**:
-   - Auto-detect platform.
-4. **Logging**:
-   - Use `level`, `prompt` from `.noi`.
-   - Accurate compilation time.
+## Community
 
-## Resources
-
-- **Build**:
-  ```bash
-  make
-  ./n0ryst --target macos examples
-  ./N0roshi
-  ```
+- Report issues or suggest features on GitHub.
+- Join discussions on forums like XDA Developers for cross-platform tips.
+- Share your Noroshi projects with the community!
 
 ---
 
-# Noroshiコンパイラ（`n0ryst`）ドキュメント
+# ノーリスト・コンパイラ
 
-## 概要
+ノーリストは、ノロシ言語のための軽量かつクロスプラットフォームのコンパイラで、日本の精密さにインスパイアされたミニマリスト哲学に基づいて設計されています。macOS、FreeBSD、Linux、Windows、iOS、Androidをサポートし、プラットフォーム固有のアセンブリ（macOS/iOS用macho64、FreeBSD/Linux/Android用ELF64、Windows用PE32+）を生成し、`ld`、`lld`、または`link.exe`などのネイティブツールで実行ファイルをリンクします。ホビーストや小型プロジェクトを求める開発者に最適です。
 
-`n0ryst`は、C言語で書かれたNoroshi言語用のコンパイラです。Noroshiは、コンソールアプリケーション向けのミニマリストなプログラミング言語です。コンパイラは`.nrs`ファイルをアセンバリ（`.asm`）に変換し、macOS（macho64）、FreeBSD（ELF64）、Linux（ELF64）向けのネイティブ実行ファイルを生成します。`nasm`とプラットフォーム固有のリンカ（`ld`）を使用します。依存関係は`.noi`ファイルで管理されます。
+## 特徴
 
-- **目的**:
-  - シンプルな構文で迅速なプロトタイピング。
-  - 効率的なネイティブコード生成。
-  - クロスプラットフォームサポート（macOS、FreeBSD、Linux）。
-- **バージョン**: 1.09（2024-2025）。
-- **プラットフォーム**: macOS、FreeBSD、Linux。
-- **依存関係**: `nasm`、macOS用`ld`、FreeBSD/Linux用`ld.bfd`、 `gcc`/`clang`。
-- **ライセンス**: BSL 1.0。
+- **クロスプラットフォーム対応**：単一の`--target`フラグでmacOS、FreeBSD、Linux、Windows、iOS、Android向けにノロシコードをコンパイル。
+- **ミニマリスト設計**：クリーンな構文、軽量なフットプリント、効率的なコード生成。
+- **プラットフォーム固有のアセンブリ**：各プラットフォームのABIおよびシステムコールに合わせたmacho64、ELF64、またはPE32+を生成。
+- **依存関係管理**：`.noi`設定ファイルで最大16の依存関係をサポート。
+- **拡張可能**：新しいノロシ言語機能やプラットフォーム対応を簡単に追加可能。
+- **オープンソース**：Boost Software License 1.0 (BSL 1.0)の下でライセンス。
+
+## ライセンス
+
+Boost Software License 1.0 (BSL 1.0)の下でライセンスされています。詳細は`LICENSE`を参照してください。
 
 ## インストール
 
+ビルド前にプラットフォームに必要なツールを準備してください。
+
 ### macOS
-- **要件**:
-  - Xcode 11+（`xcode-select --install`）。
-  - `nasm`:
-    ```bash
-    sudo port install nasm
-    ```
-- **ビルド**:
-  ```bash
-  cd /Users/retochan/Projects/n0ryst-project
-  make
-  ```
-- **確認**:
-  ```bash
-  ./n0ryst --version
-  ```
-  出力: `n0ryst ver. 1.09, 2024-2025`。
+```bash
+xcode-select --install
+sudo port install nasm
+make
+```
 
 ### FreeBSD
-- **要件**:
-  - FreeBSD 12+。
-  - `nasm`、`binutils`、`gcc`/`clang`:
-    ```bash
-    sudo pkg install nasm binutils gcc
-    ```
-- **ビルド**:
-  ```bash
-  cd /path/to/n0ryst-project
-  gmake
-  ```
-- **確認**:
-  ```bash
-  ./n0ryst --version
-  ```
+```bash
+sudo pkg install nasm binutils gcc
+gmake
+```
 
-### Linux（Ubuntu/Debian）
-- **要件**:
-  - `nasm`、`binutils`、`gcc`:
-    ```bash
-    sudo apt update
-    sudo apt install nasm binutils gcc
-    ```
-- **ビルド**:
-  ```bash
-  cd /path/to/n0ryst-project
-  make
-  ```
-- **確認**:
-  ```bash
-  ./n0ryst --version
-  ```
+### Linux
+```bash
+sudo apt update
+sudo apt install nasm binutils gcc
+make
+```
 
-### 環境チェック
-- NASM: `nasm -v`
-- GCC/Clang: `gcc --version` または `clang --version`
-- LD: `ld --version`
-- FreeBSD/Linuxライブラリ: `/usr/include`、`/usr/lib`。
+### Windows
+- MSYS2をインストール：`pacman -S mingw-w64-x86_64-nasm mingw-w64-x86_64-gcc`
+- MSVCの`link.exe`（Visual Studio Build Tools）をPATHに追加。
+```bash
+mingw32-make
+```
+
+### iOS
+- XcodeとiOS SDKをインストール。
+- リンクに`xcodebuild`を設定。
+```bash
+make
+```
+
+### Android
+- Android NDKをインストール：`sudo apt install android-ndk`（Linux）または同等。
+- NDKの`lld`リンカを使用。
+```bash
+make
+```
 
 ## 使用方法
 
-### コマンドライン
 ```bash
-n0ryst [options] [path]
-```
-- `path`: `.nrs`（コード）と`.noi`（設定）を含むディレクトリ。
-- オプション:
-  - `--help`: ヘルプを表示。
-  - `--version`: バージョンを表示。
-  - `--target <platform>`: ターゲットプラットフォーム（macos、推奨、freebsd、linux）。
-
-例:
-```bash
-./n0ryst examples
+n0ryst [オプション] [パス]
 ```
 
-### プロジェクト構造
+- `path`：`.nrs`（ノロシコード）と`.noi`（設定）ファイルを含むディレクトリ。
+- オプション：
+  - `--help`：ヘルプメッセージを表示。
+  - `--version`：バージョン（1.09, 2024-2025）を表示。
+  - `--target <プラットフォーム>`：対象プラットフォーム（`macos`, `freebsd`, `linux`, `windows`, `ios`, `android`）を指定。
+
+### 例
+Linux向けにコンパイル：
+```bash
+n0ryst --target linux .
+```
+出力を実行：
+```bash
+./N0roshi
+```
+
+## プロジェクト構造
+
+典型的なノーリストプロジェクトは以下を含みます：
+- `.nrs`ファイル：ノロシのソースコード（メインおよび依存関係）。
+- `.noi`ファイル：カーネル名、依存関係、ランタイム設定の構成。
+
+例の構造：
 ```
 project/
-├── main.nrs        # メインコード
-├── module1.nrs     # 依存関係
-└── config.noi      # 設定
+├── main.nrs        # メインプログラム
+├── module1.nrs     # 依存モジュール
+└── config.noi      # プロジェクト設定
 ```
 
-### 設定（.noi）
-例:
+## 設定ファイル (.noi)
+
+`.noi`ファイルはプロジェクト設定を定義します。例：
 ```noi
 kernel: N0roshi
 deps: module1.nrs
@@ -528,23 +409,29 @@ mem: 16M
 level: debug
 prompt: "> "
 ```
-- `kernel`: 出力実行ファイル名。
-- `deps`: 依存ファイル（最大16）。
-- `exit_key`: プログラム終了キー。
-- `start`、`mem`、`level`、`prompt`: 将来の使用のために予約。
+
+- `kernel`：出力実行ファイル名。
+- `deps`：依存`.nrs`ファイルのコンマ区切りリスト（最大16）。
+- `exit_key`：プログラム終了キー（デフォルト：`q`）。
+- `start`, `mem`, `level`, `prompt`：将来の機能（例：エントリーポイント、メモリ割り当て、ログ、UIプロンプト）のために予約。
+
+## コンパイルプロセス
+
+ノーリストは`.nrs`ファイルを字句解析、構文解析、型チェック、コード生成を通じて処理し、プラットフォーム固有のアセンブリを生成します。出力は実行ファイルにリンクされます。
 
 ### コンパイル出力
+依存関係が1つのプロジェクトのログ例：
 ```
 n0ryst ver. 1.09, 2024-2025
-Starting compiling
-Compiling dependency: examples/module1.nrs
+Starting compilation
+Compiling dependency: module1.nrs
 [Parsing] 50%
 [Parsing] 100%
 [Type Checking] 0%
 [Type Checking] 100%
 [Codegen] 0%
 [Codegen] 100%
-Compiling main: examples/main.nrs
+Compiling main file: main.nrs
 [Parsing] 50%
 [Parsing] 100%
 [Type Checking] 0%
@@ -554,282 +441,159 @@ Compiling main: examples/main.nrs
 Compiled in 0.XX seconds
 ```
 
-## Noroshi言語
+生成された実行ファイル（例：`N0roshi`）は`N0roshi running...`を出力し、`exit_key`で終了します。
+
+## ノロシ言語
+
+ノロシは、シンプルさと明瞭さを追求したミニマリスト言語で、日本の美学にインスパイアされています。
 
 ### 構文
 
 #### ブロック
+コードをブロックで囲みます：
 ```
 /+[ <コマンド> /=]
 ```
 
 #### 変数
+64ビット整数または文字列を宣言および割り当て：
 ```
 let x = 42
+let name = "Shinobi"
 ```
-- 型: `Int64`、文字列。
-- スタックに保存。
+- スタックに格納。
+- `Int64`および文字列をサポート。
 
 #### 出力
+コンソールに出力：
 ```
-pnt "Hello"
+pnt "Hello, Noroshi!"
 ```
-- FreeBSD/Linuxでは`printf`、macOSでは`_printf`で出力。
+- FreeBSD/Linux/Windows/Androidでは`printf`、macOS/iOSでは`_printf`を使用。
 
 #### キーボードチェック
+キーボード入力をチェック：
 ```
 kbchk
 ```
-- FreeBSD/Linuxでは`getchar`、macOSでは`_getchar`で入力。
-- `exit_key`で終了。
+- FreeBSD/Linux/Windows/Androidでは`getchar`、macOS/iOSでは`_getchar`で読み取り。
+- 入力が`exit_key`と一致する場合に終了。
 
-#### 例
+#### プログラム例
 `main.nrs`:
 ```
-/+[ let score = 0 pnt "Game started" kbchk /=]
+/+[ 
+  let score = 0 
+  pnt "Game started" 
+  kbchk 
+/=]
 ```
+出力：`Game started`、`q`で終了。
 
 ### 制限
-- ループ、条件、関数なし。
-- 型: 数値、文字列、`=`シンボル。
-- 制限: 1024トークン、2048 ASTノード、4096バイト出力。
+- ループ、条件分岐、関数は未サポート（将来のバージョンで予定）。
+- サポートされるトークン：数値、文字列、`=`、`/+[`, `/=]`。
+- 制限：1024トークン、2048 ASTノード、4096バイトのアセンブリ出力。
 
-## コンパイラ内部
+## プラットフォーム詳細
 
-### コンパイル段階
-1. **.noiの読み込み**:
-   - `kernel`、`deps`、`exit_key`を解析。
-2. **.nrsの検索**:
-   - `deps`に記載されていないメインファイル。
-3. **字句解析**:
-   - トークン: `TOKEN_OP_BLOCK_START`（`/+[`）、`TOKEN_STRING`、`TOKEN_EOF`など。
-4. **構文解析**:
-   - AST: `AST_BLOCK`、`AST_VARDECL`、`AST_PRINT`、`AST_KBCHK`、`AST_END`。
-5. **コード生成**:
-   - macOS用macho64またはFreeBSD/Linux用ELF64のアセンブリを生成。
-   - メインファイル: macOSでは`_main`、FreeBSD/Linuxでは`main`。
-   - 依存関係: `module_init`。
-6. **アセンブリ**:
-   - macOS: `nasm -f macho64`、`ld -lSystem`。
-   - FreeBSD: `nasm -f elf64`、`ld.bfd -lc`。
-   - Linux: `nasm -f elf64`、`ld -lc`。
-7. **クリーンアップ**:
-   - `.o`、`.asm`を削除。
-
-### アセンブリ（macOS）
-```nasm
-section .data
-msg db 'N0roshi running...', 10, 0
-input_buf db 0
-section .text
-extern _getchar
-extern _printf
-global _main
-kbhit:
-  mov rax, 0x2000003
-  mov rdi, 0
-  syscall
-  cmp rax, -1
-  je .no_key
-  mov byte [rel input_buf], al
-  mov rax, 1
-  ret
-.no_key:
-  xor rax, rax
-  ret
-_main:
-  push rbp
-  mov rbp, rsp
-  sub rsp, 16
-  lea rdi, [rel msg]
-  xor rax, rax
-  call _printf
-  call kbhit
-  test rax, rax
-  jz .no_input
-  mov al, byte [rel input_buf]
-  cmp al, 'q'
-  je .exit
-.no_input:
-.exit:
-  mov rsp, rbp
-  pop rbp
-  mov rax, 0x2000001
-  mov rdi, 0
-  syscall
-```
-
-### アセンブリ（FreeBSD/Linux）
-```nasm
-section .data
-msg db 'N0roshi running...', 10, 0
-input_buf db 0
-section .text
-extern getchar
-extern printf
-global main
-kbhit:
-  mov rax, 0
-  mov rdi, 0
-  mov rsi, input_buf
-  mov rdx, 1
-  syscall
-  cmp rax, 0
-  je .no_key
-  mov rax, 1
-  ret
-.no_key:
-  xor rax, rax
-  ret
-main:
-  push rbp
-  mov rbp, rsp
-  sub rsp, 16
-  lea rdi, [msg]
-  xor rax, rax
-  call printf
-  call kbhit
-  test rax, rax
-  jz .no_input
-  mov al, [input_buf]
-  cmp al, 'q'
-  je .exit
-.no_input:
-.exit:
-  mov rsp, rbp
-  pop rbp
-  mov rax, 60
-  xor rdi, rdi
-  syscall
-```
-
-## クロスコンパイル
+ノーリストは各プラットフォームのアーキテクチャとシステムコールに適応します。
 
 ### macOS
-- **コマンド**:
-  ```bash
-  ./n0ryst --target macos examples
-  ```
-- **リンカ**: `ld -lSystem -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`。
+- アセンブリ：macho64
+- システムコール：Mach（`0x2000003`で`read`、`0x2000001`で`exit`）
+- 関数：`_printf`, `_getchar`
+- リンカ：`ld -lSystem -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`
+```bash
+n0ryst --target macos .
+```
 
 ### FreeBSD
-- **コマンド**:
-  ```bash
-  ./n0ryst --target freebsd examples
-  ```
-- **リンカ**: `ld.bfd -lc`。
-- **ライブラリ**: `/usr/lib`（FreeBSD `libc`）。
+- アセンブリ：ELF64
+- システムコール：`read: 3`, `exit: 1`
+- 関数：`printf`, `getchar`
+- リンカ：`ld.bfd -lc`
+```bash
+n0ryst --target freebsd .
+```
 
 ### Linux
-- **コマンド**:
-  ```bash
-  ./n0ryst --target linux examples
-  ```
-- **リンカ**: `ld -lc`。
-- **ライブラリ**: `/usr/lib`（GNU `glibc`）。
-
-## 例
-
-### シンプルなプログラム
-`main.nrs`:
-```
-/+[ pnt "Welcome" kbchk /=]
-```
-`config.noi`:
-```noi
-kernel: Welcome
-exit_key: "q"
-```
+- アセンブリ：ELF64
+- システムコール：`read: 0`, `exit: 60`
+- 関数：`printf`, `getchar`
+- リンカ：`ld -lc`
 ```bash
-./n0ryst --target macos .
-./Welcome
-```
-出力: `N0roshi running...`
-
-### 変数付き
-`main.nrs`:
-```
-/+[ let x = 10 pnt "Score set" kbchk /=]
-```
-- `x = 10`を設定。
-- `Score set`を出力。
-
-### 依存関係付き
-`module1.nrs`:
-```
-/+[ pnt "Module loaded" /=]
-```
-`main.nrs`:
-```
-/+[ pnt "Main started" kbchk /=]
-```
-`config.noi`:
-```noi
-kernel: Game
-deps: module1.nrs
-exit_key: "q"
+n0ryst --target linux .
 ```
 
-## デバッグ
+### Windows
+- アセンブリ：PE32+
+- 関数：`printf`, `getchar`（msvcrt）、`ExitProcess`（kernel32）
+- リンカ：`link /out:<kernel>.exe msvcrt.lib kernel32.lib`
+```bash
+n0ryst --target windows .
+```
+
+### iOS
+- アセンブリ：macho64
+- システムコール：Mach（`0x2000003`で`read`、`0x2000001`で`exit`）
+- 関数：`_printf`, `_getchar`
+- リンカ：`ld -lSystem -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk`
+```bash
+n0ryst --target ios .
+```
+
+### Android
+- アセンブリ：ELF64
+- システムコール：`read: 0`, `exit: 60`
+- 関数：`printf`, `getchar`
+- リンカ：`ld -lc`（NDKの`lld`）
+```bash
+n0ryst --target android .
+```
+
+## ノーリストの拡張
+
+新機能を追加するには：
+1. **言語機能**：`n0ryst.c`の`lexer`および`parser`を拡張して新しいトークン（例：ループ、条件分岐）をサポート。
+2. **プラットフォーム対応**：新しい`Platform`列挙値を追加し、`codegen`を新しいシステムコール/ABI用に更新。
+3. **依存関係**：`read_noi`を変更して追加の`.noi`フィールドをサポート。
+4. **最適化**：`codegen`を強化してより小さく/高速なアセンブリ出力を生成。
+
+GitHubのプルリクエストで貢献してください。
+
+## トラブルシューティング
 
 ### コンパイルエラー
-- **字句**:
-  ```
-  Lexing error at position X, character 'Y'
-  ```
-  - `.nrs`の位置`X`を確認。
-- **構文**:
-  ```
-  Parsing error: expected block start
-  ```
-  - コードが`/+[`で始まり、`/=]`で終わることを確認。
-- **ファイル**:
-  ```
-  Error: No main .nrs file found
-  ```
-  - `deps`に記載されていない`.nrs`を追加。
+- **字句解析**：`Lexing error at position X, character 'Y'`
+  - `.nrs`の構文を位置`X`で確認。
+- **構文解析**：`Parsing error: expected block start`
+  - `/+[`と`/=]`のペアを確認。
+- **ファイル未検出**：`Error: No main .nrs file found`
+  - `.noi`の`deps`に含まれていない`.nrs`ファイルが存在することを確認。
 
 ### ビルドエラー
-- **macOS**:
-  ```
-  ld: library 'System' not found
-  ```
-  - SDKを確認: `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`。
-- **FreeBSD**:
-  ```
-  ld: cannot find -lc
-  ```
-  - `libc`をインストール: `sudo pkg install lib32`。
-- **Linux**:
-  ```
-  ld: cannot find -lc
-  ```
-  - `libc6-dev`をインストール: `sudo apt install libc6-dev`。
+- **macOS/iOS**：`ld: library 'System' not found`
+  - Xcode SDKパスを確認。
+- **FreeBSD**：`ld: cannot find -lc`
+  - `lib32`をインストール：`sudo pkg install lib32`。
+- **Linux**：`ld: cannot find -lc`
+  - `libc6-dev`をインストール：`sudo apt install libc6-dev`。
+- **Windows**：`LINK : fatal error`
+  - MSVCの`link.exe`と`msvcrt.lib`がPATHにあることを確認。
+- **Android**：リンカエラー
+  - NDKパスと`lld`設定を確認。
 
 ### 実行時エラー
-- 出力なし:
-  - コードに`pnt`があるか確認。
-- `q`で終了しない:
-  - `.noi`の`exit_key`を確認。
+- **出力なし**：`.nrs`に`pnt`コマンドを確認。
+- **キーで終了しない**：`.noi`の`exit_key`を確認。
+- **クラッシュ**：
+  - Unix：`gdb ./N0roshi`, `run`
+  - Windows：`gdb N0roshi.exe`, `run`
+  - iOS/Android：Xcode/ADBログを使用。
 
-## 改善案
-1. **構文**:
-   - ループ（`while`）、条件（`if`）、関数を追加。
-   - `Float`、配列をサポート。
-2. **コンパイラ**:
-   - ASTを最適化。
-   - 行番号付きの詳細なエラーメッセージ。
-3. **クロスコンパイル**:
-   - プラットフォームの自動検出。
-4. **ログ**:
-   - `.noi`の`level`、`prompt`を使用。
-   - 正確なコンパイル時間。
+## コミュニティ
 
-## リソース
-
-- **ビルド**:
-  ```bash
-  make
-  ./n0ryst --target macos examples
-  ./N0roshi
-  ```
+- GitHubで問題を報告または新機能を提案。
+- XDA Developersなどのフォーラムでクロスプラットフォームのヒントを議論。
+- ノロシプロジェクトをコミュニティと共有！
