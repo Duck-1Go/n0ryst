@@ -51,6 +51,15 @@ typedef struct {
     char prompt[64];
 } Config;
 
+enum Platform {
+    PLATFORM_MACOS,
+    PLATFORM_FREEBSD,
+    PLATFORM_LINUX,
+    PLATFORM_WINDOWS,
+    PLATFORM_IOS,
+    PLATFORM_ANDROID
+};
+
 Token tokens[MAX_TOKENS];
 ASTNode ast[MAX_AST];
 char output_buf[MAX_OUTPUT];
@@ -58,6 +67,7 @@ int token_count = 0;
 int ast_count = 0;
 int output_pos = 0;
 Config config = { .kernel = "n0ryst", .dep_count = 0, .exit_key = "q" };
+enum Platform target_platform = PLATFORM_MACOS;
 
 void n0ryst_log(const char* msg) {
     printf("%s\n", msg);
@@ -303,48 +313,79 @@ void append_str(const char* str) {
 void codegen(int is_main) {
     append_str("section .data\n");
     append_str("msg db 'N0roshi running...', 10, 0\n");
-    append_str("score db 'Score: ', 0\n");
     append_str("input_buf db 0\n");
     append_str("section .text\n");
-    append_str("extern _getchar\n");
-    append_str("extern _printf\n");
 
-    if (is_main) {
-        append_str("global _main\n");
+    if (target_platform == PLATFORM_MACOS || target_platform == PLATFORM_IOS) {
+        append_str("extern _getchar\n");
+        append_str("extern _printf\n");
+        if (is_main) append_str("global _main\n");
+    } else if (target_platform == PLATFORM_WINDOWS) {
+        append_str("extern getchar\n");
+        append_str("extern printf\n");
+        if (is_main) append_str("global main\n");
+    } else {
+        append_str("extern getchar\n");
+        append_str("extern printf\n");
+        if (is_main) append_str("global main\n");
     }
 
     append_str("kbhit:\n");
-    append_str("  mov rax, 0x2000003\n");
-    append_str("  mov rdi, 0\n");
-    append_str("  syscall\n");
-    append_str("  cmp rax, -1\n");
-    append_str("  je .no_key\n");
-    append_str("  mov byte [rel input_buf], al\n");
-    append_str("  mov rax, 1\n");
-    append_str("  ret\n");
+    if (target_platform == PLATFORM_MACOS || target_platform == PLATFORM_IOS) {
+        append_str("  mov rax, 0x2000003\n");
+        append_str("  mov rdi, 0\n");
+        append_str("  syscall\n");
+        append_str("  cmp rax, -1\n");
+    } else if (target_platform == PLATFORM_FREEBSD) {
+        append_str("  mov rax, 3\n");
+        append_str("  mov rdi, 0\n");
+        append_str("  mov rsi, input_buf\n");
+        append_str("  mov rdx, 1\n");
+        append_str("  syscall\n");
+        append_str("  cmp rax, 0\n");
+    } else if (target_platform == PLATFORM_LINUX || target_platform == PLATFORM_ANDROID) {
+        append_str("  mov rax, 0\n");
+        append_str("  mov rdi, 0\n");
+        append_str("  mov rsi, input_buf\n");
+        append_str("  mov rdx, 1\n");
+        append_str("  syscall\n");
+        append_str("  cmp rax, 0\n");
+    } else {
+        append_str("  call getchar\n");
+        append_str("  cmp rax, -1\n");
+        append_str("  je .no_key\n");
+        append_str("  mov byte [input_buf], al\n");
+        append_str("  mov rax, 1\n");
+        append_str("  ret\n");
+    }
+    if (target_platform != PLATFORM_WINDOWS) {
+        append_str("  je .no_key\n");
+        append_str("  mov byte [rel input_buf], al\n");
+        append_str("  mov rax, 1\n");
+        append_str("  ret\n");
+    }
     append_str(".no_key:\n");
     append_str("  xor rax, rax\n");
     append_str("  ret\n");
 
     if (is_main) {
-        append_str("_main:\n");
-        append_str("  push rbp\n");
-        append_str("  mov rbp, rsp\n");
-        append_str("  sub rsp, 16\n");
+        if (target_platform == PLATFORM_MACOS || target_platform == PLATFORM_IOS) {
+            append_str("_main:\n");
+        } else {
+            append_str("main:\n");
+        }
     } else {
         append_str("module_init:\n");
-        append_str("  push rbp\n");
-        append_str("  mov rbp, rsp\n");
-        append_str("  sub rsp, 16\n");
     }
+    append_str("  push rbp\n");
+    append_str("  mov rbp, rsp\n");
+    append_str("  sub rsp, 16\n");
 
     for (int i = 0; i < ast_count; i++) {
         if (ast[i].type == AST_BLOCK) {
             continue;
         } else if (ast[i].type == AST_VARDECL) {
-            append_str("  mov qword [rbp-8], 0 ; ");
-            append_str(ast[i].value);
-            append_str("\n");
+            append_str("  mov qword [rbp-8], 0\n");
             if (ast[i].value2[0]) {
                 append_str("  mov rax, ");
                 append_str(ast[i].value2);
@@ -352,9 +393,15 @@ void codegen(int is_main) {
                 append_str("  mov [rbp-8], rax\n");
             }
         } else if (ast[i].type == AST_PRINT) {
-            append_str("  lea rdi, [rel msg]\n");
-            append_str("  xor rax, rax\n");
-            append_str("  call _printf\n");
+            if (target_platform == PLATFORM_MACOS || target_platform == PLATFORM_IOS) {
+                append_str("  lea rdi, [rel msg]\n");
+                append_str("  xor rax, rax\n");
+                append_str("  call _printf\n");
+            } else {
+                append_str("  lea rdi, [msg]\n");
+                append_str("  xor rax, rax\n");
+                append_str("  call printf\n");
+            }
         } else if (ast[i].type == AST_KBCHK) {
             append_str("  call kbhit\n");
             append_str("  test rax, rax\n");
@@ -372,9 +419,22 @@ void codegen(int is_main) {
     append_str("  mov rsp, rbp\n");
     append_str("  pop rbp\n");
     if (is_main) {
-        append_str("  mov rax, 0x2000001\n");
-        append_str("  mov rdi, 0\n");
-        append_str("  syscall\n");
+        if (target_platform == PLATFORM_MACOS || target_platform == PLATFORM_IOS) {
+            append_str("  mov rax, 0x2000001\n");
+            append_str("  mov rdi, 0\n");
+            append_str("  syscall\n");
+        } else if (target_platform == PLATFORM_FREEBSD) {
+            append_str("  mov rax, 1\n");
+            append_str("  xor rdi, rdi\n");
+            append_str("  syscall\n");
+        } else if (target_platform == PLATFORM_LINUX || target_platform == PLATFORM_ANDROID) {
+            append_str("  mov rax, 60\n");
+            append_str("  xor rdi, rdi\n");
+            append_str("  syscall\n");
+        } else {
+            append_str("  mov rcx, 0\n");
+            append_str("  call ExitProcess\n");
+        }
     } else {
         append_str("  ret\n");
     }
@@ -403,6 +463,7 @@ void show_help() {
     printf("Options:\n");
     printf("  --help    Show this help message\n");
     printf("  --version Show version\n");
+    printf("  --target <platform>  Target platform (macos, freebsd, linux, windows, ios, android)\n");
     printf("  path      Directory with .nrs and .noi files\n");
     exit(0);
 }
@@ -416,13 +477,31 @@ int main(int argc, char* argv[]) {
     char nrs_path[MAX_PATH] = "";
     char dir[MAX_PATH] = ".";
 
-    if (argc > 1) {
-        if (strcmp(argv[1], "--help") == 0) {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--help") == 0) {
             show_help();
-        } else if (strcmp(argv[1], "--version") == 0) {
+        } else if (strcmp(argv[i], "--version") == 0) {
             show_version();
+        } else if (strcmp(argv[i], "--target") == 0 && i + 1 < argc) {
+            i++;
+            if (strcmp(argv[i], "macos") == 0) {
+                target_platform = PLATFORM_MACOS;
+            } else if (strcmp(argv[i], "freebsd") == 0) {
+                target_platform = PLATFORM_FREEBSD;
+            } else if (strcmp(argv[i], "linux") == 0) {
+                target_platform = PLATFORM_LINUX;
+            } else if (strcmp(argv[i], "windows") == 0) {
+                target_platform = PLATFORM_WINDOWS;
+            } else if (strcmp(argv[i], "ios") == 0) {
+                target_platform = PLATFORM_IOS;
+            } else if (strcmp(argv[i], "android") == 0) {
+                target_platform = PLATFORM_ANDROID;
+            } else {
+                fprintf(stderr, "Error: Invalid target platform '%s'\n", argv[i]);
+                exit(1);
+            }
         } else {
-            strncpy(dir, argv[1], MAX_PATH - 1);
+            strncpy(dir, argv[i], MAX_PATH - 1);
         }
     }
 
@@ -432,7 +511,7 @@ int main(int argc, char* argv[]) {
     }
 
     n0ryst_log("n0ryst ver. 1.09, 2024-2025");
-    n0ryst_log("Starting compiling");
+    n0ryst_log("Starting compilation");
 
     for (int i = 0; i < config.dep_count; i++) {
         n0ryst_log("Compiling dependency:");
@@ -444,11 +523,13 @@ int main(int argc, char* argv[]) {
         fwrite(output_buf, 1, output_pos, out);
         fclose(out);
         char cmd[512];
-        snprintf(cmd, 512, "nasm -f macho64 out.asm -o %s", obj_path);
+        snprintf(cmd, 512, "nasm -f %s out.asm -o %s",
+                 target_platform == PLATFORM_MACOS || target_platform == PLATFORM_IOS ? "macho64" :
+                 target_platform == PLATFORM_WINDOWS ? "win64" : "elf64", obj_path);
         system(cmd);
     }
 
-    n0ryst_log("Compiling main:");
+    n0ryst_log("Compiling main file:");
     n0ryst_log(nrs_path);
     compile_file(nrs_path, 1);
 
@@ -463,14 +544,33 @@ int main(int argc, char* argv[]) {
     n0ryst_log("Compiled in 0.XX seconds");
 
     char cmd[512];
-    snprintf(cmd, 512, "nasm -f macho64 out.asm -o main.o && ld -w -platform_version macos 10.15 10.15 -L/usr/lib -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -o %s main.o", config.kernel);
+    if (target_platform == PLATFORM_MACOS) {
+        snprintf(cmd, 512, "nasm -f macho64 out.asm -o main.o && ld -w -platform_version macos 10.15 10.15 -L/usr/lib -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -o %s main.o", config.kernel);
+    } else if (target_platform == PLATFORM_FREEBSD) {
+        snprintf(cmd, 512, "nasm -f elf64 out.asm -o main.o && ld.bfd -o %s main.o", config.kernel);
+    } else if (target_platform == PLATFORM_LINUX) {
+        snprintf(cmd, 512, "nasm -f elf64 out.asm -o main.o && ld -o %s main.o", config.kernel);
+    } else if (target_platform == PLATFORM_WINDOWS) {
+        snprintf(cmd, 512, "nasm -f win64 out.asm -o main.o && link /out:%s.exe main.o msvcrt.lib kernel32.lib", config.kernel);
+    } else if (target_platform == PLATFORM_IOS) {
+        snprintf(cmd, 512, "nasm -f macho64 out.asm -o main.o && ld -o %s main.o -lSystem -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk", config.kernel);
+    } else {
+        snprintf(cmd, 512, "nasm -f elf64 out.asm -o main.o && ld -o %s main.o -lc", config.kernel);
+    }
     for (int i = 0; i < config.dep_count; i++) {
         char obj_path[MAX_PATH];
         snprintf(obj_path, MAX_PATH, "dep%d.o", i);
         strncat(cmd, " ", 512 - strlen(cmd) - 1);
         strncat(cmd, obj_path, 512 - strlen(cmd) - 1);
     }
-    strncat(cmd, " -lSystem && rm main.o out.asm", 512 - strlen(cmd) - 1);
+    if (target_platform == PLATFORM_MACOS) {
+        strncat(cmd, " -lSystem", 512 - strlen(cmd) - 1);
+    } else if (target_platform == PLATFORM_FREEBSD || target_platform == PLATFORM_LINUX || target_platform == PLATFORM_ANDROID) {
+        strncat(cmd, " -lc", 512 - strlen(cmd) - 1);
+    } else if (target_platform == PLATFORM_IOS) {
+        strncat(cmd, " -lSystem", 512 - strlen(cmd) - 1);
+    }
+    strncat(cmd, " && rm -f main.o out.asm", 512 - strlen(cmd) - 1);
     for (int i = 0; i < config.dep_count; i++) {
         char obj_path[MAX_PATH];
         snprintf(obj_path, MAX_PATH, "dep%d.o", i);
